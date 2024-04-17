@@ -1,0 +1,29 @@
+version: "3"
+
+services:
+  balancer:
+    container_name: traffic_balancer
+    build:
+      context: .
+      dockerfile: lb.Dockerfile
+    environment:
+      PORT: "8080"
+      REDIS_ADDRESS: "hosts_redis:6379"
+      REDIS_DB: 0
+      MAX_PARALLEL_REQUESTS: 5
+      RESET_INTERVAL: 30s
+    ports:
+      - "8080:8080"
+
+  redis:
+    container_name: hosts_redis
+    image: redis/redis-stack-server:latest
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis_cli", "--raw", "incr", "ping"]
+    volumes:
+      - redis_data:/redis
+
+volumes:
+  redis_data:
