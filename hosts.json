@@ -1,15 +1,15 @@
 {
   "servers": [
     {
-      "ip": "",
+      "ip": "loadbalancer-s_serv-1",
       "port": 8000
     },
     {
-      "ip": "",
+      "ip": "loadbalancer-s_serv-2",
       "port": 8000
     },
     {
-      "ip": "",
+      "ip": "loadbalancer-s_serv-3",
       "port": 8000
     }
   ]

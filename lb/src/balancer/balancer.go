@@ -10,7 +10,8 @@ import (
 
 type DB interface {
 	GetHosts(context.Context) ([]models.Host, error)
-	Set(ctx context.Context, host models.Host) error
+	Set(context.Context, models.Host) error
+	Get(context.Context, string) (models.Host, error)
 }
 
 type LoadBalancer struct {
@@ -27,7 +28,17 @@ func New(db DB, max int, interval time.Duration) *LoadBalancer {
 	}
 }
 
-func (lb *LoadBalancer) ReceiverHost(ctx context.Context) (*Host, error) {
+func (lb *LoadBalancer) DropHost(ctx context.Context, address string) error {
+	h, err := lb.db.Get(ctx, address)
+	if err != nil {
+		return fmt.Errorf("dropping host error: %w", err)
+	}
+	h.Stats.OngoingReqs--
+
+	return lb.db.Set(context.Background(), h)
+}
+
+func (lb *LoadBalancer) AcquireHost(ctx context.Context) (*Host, error) {
 	var host Host
 
 	minOngoingReqs := lb.maxCapacity
@@ -38,7 +49,9 @@ func (lb *LoadBalancer) ReceiverHost(ctx context.Context) (*Host, error) {
 		return nil, fmt.Errorf("no host was found: %w", err)
 	}
 
-	for _, h := range hosts {
+	var pickedHostIndex int
+
+	for i, h := range hosts {
 		if h.Stats.OngoingReqs < minOngoingReqs {
 			minOngoingReqs = h.Stats.OngoingReqs
 
@@ -46,7 +59,15 @@ func (lb *LoadBalancer) ReceiverHost(ctx context.Context) (*Host, error) {
 				ip:   h.Address,
 				port: h.Port,
 			}
+			pickedHostIndex = i
 		}
+	}
+
+	hosts[pickedHostIndex].Stats.OngoingReqs++
+	hosts[pickedHostIndex].Stats.OverallRequests++
+
+	if err := lb.db.Set(ctx, hosts[pickedHostIndex]); err != nil {
+		return nil, fmt.Errorf("stats udpdate error: %w", err)
 	}
 
 	return &host, nil

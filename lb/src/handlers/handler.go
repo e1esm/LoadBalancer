@@ -1,8 +1,10 @@
 package handlers
 
 import (
+	log "github.com/sirupsen/logrus"
 	"io"
 	"net/http"
+	"time"
 )
 
 type App interface {
@@ -20,17 +22,23 @@ func New(app App) *BalancingHandler {
 }
 
 func (bh *BalancingHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer log.Infof("Host: %s\nPath: %s\nTime:%v\n", r.Host, r.RequestURI, time.Since(start))
 
 	body, err := io.ReadAll(r.Body)
+	defer r.Body.Close()
+
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		return
 	}
 
-	if err := bh.app.Send(r.Method, r.URL.String(), body); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+	go func() {
+		if err := bh.app.Send(r.Method, r.URL.Path, body); err != nil {
+			log.Info(err.Error())
+			return
+		}
+	}()
 
 	w.WriteHeader(http.StatusOK)
 	return
