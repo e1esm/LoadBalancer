@@ -47,7 +47,7 @@ func main() {
 	}()
 
 	go func() {
-		serviceDiscovery.Scan()
+		serviceDiscovery.Scan(ctx)
 	}()
 
 	go func() {
