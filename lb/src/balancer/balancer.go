@@ -11,7 +11,7 @@ import (
 
 type DB interface {
 	Set(context.Context, models.Host) error
-	Get(context.Context, string) (models.Host, error)
+	GetOrSet(context.Context, string) (models.Host, error)
 }
 
 type LoadBalancer struct {
@@ -31,7 +31,7 @@ func New(db DB, max int, interval time.Duration, services *sync.Map) *LoadBalanc
 }
 
 func (lb *LoadBalancer) DropHost(ctx context.Context, address string) error {
-	h, err := lb.db.Get(ctx, address)
+	h, err := lb.db.GetOrSet(ctx, address)
 	if err != nil {
 		return fmt.Errorf("dropping host error: %w", err)
 	}
@@ -42,23 +42,8 @@ func (lb *LoadBalancer) DropHost(ctx context.Context, address string) error {
 
 func (lb *LoadBalancer) AcquireHost(ctx context.Context) (*Host, error) {
 	var host Host
-
 	minOngoingReqs := lb.maxCapacity
-
-	hosts := make([]models.Host, 0)
-
-	lb.availableServices.Range(func(key, value any) bool {
-		host, err := lb.db.Get(ctx, key.(string))
-		if err != nil {
-			log.WithError(err).Error("error while fetching host from DB")
-			return false
-		}
-
-		hosts = append(hosts, host)
-
-		return true
-	})
-
+	hosts := lb.availableHosts(ctx)
 	var pickedHostIndex int
 
 	for i, h := range hosts {
@@ -74,11 +59,15 @@ func (lb *LoadBalancer) AcquireHost(ctx context.Context) (*Host, error) {
 		}
 	}
 
-	hosts[pickedHostIndex].Stats.OngoingReqs++
-	hosts[pickedHostIndex].Stats.OverallRequests++
+	if len(hosts) > 0 {
+		hosts[pickedHostIndex].Stats.OngoingReqs++
+		hosts[pickedHostIndex].Stats.OverallRequests++
 
-	if err := lb.db.Set(ctx, hosts[pickedHostIndex]); err != nil {
-		return nil, fmt.Errorf("stats udpdate error: %w", err)
+		log.WithField("hosts", hosts).WithField("host", host).Info("updating stats")
+
+		if err := lb.db.Set(ctx, hosts[pickedHostIndex]); err != nil {
+			return nil, fmt.Errorf("stats udpdate error: %w", err)
+		}
 	}
 
 	return &host, nil
@@ -104,19 +93,7 @@ func (lb *LoadBalancer) Reset(ctx context.Context) {
 
 func (lb *LoadBalancer) reset(ctx context.Context) error {
 
-	hosts := make([]models.Host, 0)
-
-	lb.availableServices.Range(func(key, value any) bool {
-		host, err := lb.db.Get(ctx, key.(string))
-		if err != nil {
-			log.WithError(err).Error("error while fetching host from DB")
-			return false
-		}
-
-		hosts = append(hosts, host)
-
-		return true
-	})
+	hosts := lb.availableHosts(ctx)
 
 	for _, host := range hosts {
 		host.Stats.OngoingReqs = 0
@@ -124,6 +101,17 @@ func (lb *LoadBalancer) reset(ctx context.Context) error {
 		if err := lb.db.Set(ctx, host); err != nil {
 			return fmt.Errorf("resetting current capacity error: %w", err)
 		}
+	}
+
+	return nil
+}
+
+func (lb *LoadBalancer) setHostInfo(ctx context.Context, addr ...string) error {
+	if err := lb.db.Set(ctx, models.Host{
+		Address: addr[0],
+		Port:    strToInt(addr[1]),
+	}); err != nil {
+		return fmt.Errorf("error saving host")
 	}
 
 	return nil

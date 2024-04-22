@@ -44,7 +44,7 @@ func (a *App) Send(method string, url string, body []byte) error {
 	}
 
 	if err = a.send(req); err != nil {
-		log.WithError(err).Error("error while sending http request to target")
+		log.WithError(err).WithField("req", req).Error("error while sending http request to target")
 		return err
 	}
 

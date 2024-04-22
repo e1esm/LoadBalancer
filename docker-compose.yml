@@ -12,6 +12,8 @@ services:
       REDIS_DB: 0
       MAX_PARALLEL_REQUESTS: 5
       RESET_INTERVAL: 30s
+      BASE_SERVICE_NAME: loadbalancer-s_serv
+      TARGET_SERVICE_PORT: 8000
     ports:
       - "8080:8080"
 

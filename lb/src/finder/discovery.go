@@ -30,7 +30,7 @@ func (f *Finder) Scan(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-ticker.C:
-			go f.scan(ctx)
+			f.scan(ctx)
 		}
 	}
 }
@@ -52,21 +52,13 @@ func (f *Finder) scan(ctx context.Context) {
 			log.WithError(err).Error("error while preparing healthcheck request")
 		}
 
-		resp, err := client.Do(req)
+		_, err = client.Do(req)
 		if err != nil {
-			log.WithError(err).Info("Http request has been made to ser")
-		}
-
-		if resp.StatusCode != 200 {
 			limitMet = true
-			f.foundServices.Delete(key)
 			continue
 		}
 
-		if _, ok := f.foundServices.Load(key); !ok {
-			f.foundServices.Store(key, struct{}{})
-		}
-
+		f.foundServices.Store(key, struct{}{})
 		n++
 	}
 }
