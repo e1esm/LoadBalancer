@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/e1esm/LoadBalancer/lb/src/balancer"
+	log "github.com/sirupsen/logrus"
 	"net/http"
 	"time"
 )
@@ -34,13 +35,20 @@ func (a *App) Send(method string, url string, body []byte) error {
 		return fmt.Errorf("send error: %w", err)
 	}
 
+	defer a.balancer.DropHost(context.Background(), host.Address())
+
 	req := request{
 		method: method,
 		url:    "http://" + host.Address() + url,
 		body:   body,
 	}
 
-	return a.send(req)
+	if err = a.send(req); err != nil {
+		log.WithError(err).Error("error while sending http request to target")
+		return err
+	}
+
+	return nil
 }
 
 func (a *App) send(req request) error {

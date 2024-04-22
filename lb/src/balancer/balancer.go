@@ -68,6 +68,7 @@ func (lb *LoadBalancer) AcquireHost(ctx context.Context) (*Host, error) {
 			host = Host{
 				ip:   h.Address,
 				port: h.Port,
+				n:    i + 1,
 			}
 			pickedHostIndex = i
 		}
