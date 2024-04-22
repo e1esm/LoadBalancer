@@ -12,8 +12,10 @@ type Config struct {
 		Password string `env:"PASSWORD"`
 		DB       int    `env:"DB"`
 	} `envPrefix:"REDIS_"`
-	MaxCapacity   int    `env:"MAX_PARALLEL_REQUESTS"`
-	ResetInterval string `env:"RESET_INTERVAL"`
+	MaxCapacity           int    `env:"MAX_PARALLEL_REQUESTS"`
+	ResetInterval         string `env:"RESET_INTERVAL"`
+	TargetServiceBaseName string `env:"BASE_SERVICE_NAME"`
+	TargetServicePort     int    `env:"TARGET_SERVICE_PORT"`
 }
 
 func New() *Config {

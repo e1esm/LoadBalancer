@@ -7,10 +7,12 @@ import (
 	"github.com/e1esm/LoadBalancer/lb/src/balancer"
 	"github.com/e1esm/LoadBalancer/lb/src/cmd/config"
 	"github.com/e1esm/LoadBalancer/lb/src/db"
+	"github.com/e1esm/LoadBalancer/lb/src/finder"
 	"github.com/e1esm/LoadBalancer/lb/src/handlers"
 	log "github.com/sirupsen/logrus"
 	"net/http"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -26,7 +28,11 @@ func main() {
 		log.WithError(err).Error("duration was not parsed")
 	}
 
-	blnc := balancer.New(database, cfg.MaxCapacity, intervalDuration)
+	serviceMap := sync.Map{}
+
+	serviceDiscovery := finder.New(&serviceMap, cfg.TargetServiceBaseName, cfg.TargetServicePort)
+
+	blnc := balancer.New(database, cfg.MaxCapacity, intervalDuration, &serviceMap)
 
 	appl := app.New(blnc)
 
@@ -38,6 +44,10 @@ func main() {
 
 	go func() {
 		log.Fatal(http.ListenAndServe(fmt.Sprintf(":%d", cfg.Port), hndl))
+	}()
+
+	go func() {
+		serviceDiscovery.Scan()
 	}()
 
 	go func() {

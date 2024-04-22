@@ -18,6 +18,12 @@ func New() *Server {
 }
 
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	if r.URL.String() == "/version" {
+		w.WriteHeader(http.StatusOK)
+		return
+	}
+
 	toSleep := time.Duration(rand.Intn(60))
 	time.Sleep(toSleep * time.Second)
 
