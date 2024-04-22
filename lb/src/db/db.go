@@ -23,15 +23,15 @@ func New(addr string, password string, db int) *HostsDB {
 		Password: password,
 	})
 
-	if err := cli.Ping(context.Background()).Err(); err != nil {
-		log.WithError(err).Fatal("could not connect to redis")
-	}
-
-	hdb := &HostsDB{
+	hDB := &HostsDB{
 		cli: cli,
 	}
 
-	return hdb
+	if err := hDB.retry(); err != nil {
+		return nil
+	}
+
+	return hDB
 }
 
 func (h *HostsDB) Set(ctx context.Context, host models.Host) error {
