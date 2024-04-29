@@ -30,7 +30,7 @@ func main() {
 
 	serviceMap := sync.Map{}
 
-	serviceDiscovery := finder.New(&serviceMap, cfg.TargetServiceBaseName, cfg.TargetServicePort)
+	serviceDiscovery := finder.New(&serviceMap, cfg.TargetServiceBaseName, cfg.TargetServicePort, database)
 
 	blnc := balancer.New(database, cfg.MaxCapacity, intervalDuration, &serviceMap)
 

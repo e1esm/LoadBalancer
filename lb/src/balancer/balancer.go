@@ -54,6 +54,8 @@ func (lb *LoadBalancer) AcquireHost(ctx context.Context) (*Host, error) {
 			return false
 		}
 
+		log.WithField("host", host).Info("fetched host from cache")
+
 		hosts = append(hosts, host)
 
 		return true

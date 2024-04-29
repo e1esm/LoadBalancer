@@ -2,10 +2,10 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"github.com/e1esm/LoadBalancer/lb/src/models"
 	"github.com/redis/go-redis/v9"
 	log "github.com/sirupsen/logrus"
+	"strings"
 )
 
 const (
@@ -35,14 +35,13 @@ func New(addr string, password string, db int) *HostsDB {
 }
 
 func (h *HostsDB) Set(ctx context.Context, host models.Host) error {
-	return h.cli.Set(ctx, host.Address, host, 0).Err()
+	return h.cli.Set(ctx, host.String(), host, 0).Err()
 }
 
 func (h *HostsDB) Get(ctx context.Context, addr string) (models.Host, error) {
 	var host models.Host
 	err := h.cli.Get(ctx, addr).Scan(&host)
-	if err != nil {
-		return models.Host{}, fmt.Errorf("scanning error: %w", err)
+	if err != nil && strings.Contains(err.Error(), "nil") {
 	}
 	return host, nil
 }

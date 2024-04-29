@@ -24,7 +24,7 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	toSleep := time.Duration(rand.Intn(60))
+	toSleep := time.Duration(rand.Intn(2))
 	time.Sleep(toSleep * time.Second)
 
 	start := time.Now()
